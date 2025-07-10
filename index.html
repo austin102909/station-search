@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Synoptic Weather Data</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            padding: 20px;
+            background-color: #f8f9fa;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+        .search-container {
+            margin: 20px 0;
+            max-width: 600px;
+            width: 100%;
+            display: flex;
+            gap: 10px;
+        }
+        #station-input {
+            flex-grow: 1;
+        }
+        #debug-section {
+            max-width: 600px;
+            margin: 20px 0;
+            background-color: #fff;
+            padding: 15px;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            font-size: 14px;
+            word-wrap: break-word;
+        }
+        #time-display {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            font-size: 14px;
+            background-color: #fff;
+            padding: 5px 10px;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        #next-day-button {
+            margin: 20px 0;
+        }
+        #data-view {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #fff;
+            z-index: 2000;
+            overflow-y: auto;
+            padding: 20px;
+        }
+        #data-view-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .back-arrow {
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #000;
+            margin-right: 15px;
+        }
+        #data-view-title {
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+        #data-table-container {
+            width: 100%;
+            max-width: 100%;
+            overflow-x: auto;
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid #ccc;
+        }
+        #data-table {
+            width: 100%;
+            min-width: 1000px;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+        #data-table th, #data-table td {
+            border: 1px solid #ccc;
+            padding: 8px 12px;
+            min-width: 120px;
+            text-align: left;
+        }
+        #data-table th {
+            background-color: #343a40;
+            color: white;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        #data-table tr.highlighted {
+            background-color: #e9ecef;
+        }
+        #data-table td.high-low {
+            font-weight: bold;
+            color: #dc3545;
+        }
+        #fixed-row {
+            width: 100%;
+            background-color: #e9ecef;
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 14px;
+            text-align: left;
+            margin-bottom: 10px;
+            overflow-x: auto;
+        }
+        @media (max-width: 576px) {
+            body {
+                padding: 10px;
+            }
+            .search-container {
+                flex-direction: column;
+                gap: 5px;
+            }
+            #debug-section, #fixed-row, #time-display {
+                font-size: 12px;
+                margin: 10px;
+            }
+            #data-table-container {
+                font-size: 12px;
+            }
+            .btn {
+                font-size: 14px;
+                padding: 8px 16px;
+            }
+            #data-table th, #data-table td {
+                min-width: 80px;
+            }
+            #data-view {
+                padding: 10px;
+            }
+            #data-view-title {
+                font-size: 1.2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Main View -->
+    <div id="main-view">
+        <div id="time-display">Current Time (CDT): Loading...</div>
+        <div class="container text-center">
+            <h1 class="mb-4">Synoptic Weather Data</h1>
+            <div class="search-container">
+                <input type="text" id="station-input" class="form-control" value="KDFW" placeholder="Enter station ID (e.g., KDFW)">
+                <button id="search-button" class="btn btn-primary">Search</button>
+            </div>
+            <div id="debug-section" class="text-start">
+                <strong>Debug Info:</strong><br>
+                <span id="debug-content">Enter a station ID and click Search</span>
+            </div>
+            <button id="next-day-button" class="btn btn-secondary">Generate Next Day</button>
+        </div>
+    </div>
+
+    <!-- Full-Screen Data View -->
+    <div id="data-view">
+        <div id="data-view-header">
+            <span class="back-arrow" onclick="toggleViews()">←</span>
+            <h5 id="data-view-title">Station: KDFW | Last Updated: Loading...</h5>
+        </div>
+        <div id="fixed-row" class="text-start">
+            <strong>Latest High/Low Temps:</strong><br>
+            <span id="fixed-content">No data loaded</span>
+        </div>
+        <div id="data-table-container">
+            <table id="data-table" class="table">
+                <thead>
+                    <tr>
+                        <th>Timestamp</th>
+                        <!-- Dynamic columns -->
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Luxon for date formatting -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/luxon/3.4.4/luxon.min.js"></script>
+    <script>
+        const API_TOKEN = '81ebbb6ea61247ac85cb88a96d97fcf2';
+        const API_BASE_URL = 'https://api.synopticdata.com/v2/';
+        let allObservations = [];
+        let allTimestamps = [];
+        let currentStationId = 'KDFW';
+        let lastUpdateTime = '';
+
+        // Toggle between main and data views
+        function toggleViews() {
+            console.log('Toggling views at', new Date().toISOString());
+            try {
+                const mainView = $('#main-view');
+                const dataView = $('#data-view');
+                if (!mainView.length || !dataView.length) {
+                    throw new Error('Main or data view DOM element missing');
+                }
+                if (dataView.is(':visible')) {
+                    dataView.hide();
+                    mainView.show();
+                    console.log('Switched to main view');
+                } else {
+                    mainView.hide();
+                    dataView.show();
+                    console.log('Switched to data view');
+                }
+            } catch (e) {
+                console.error('Error in toggleViews:', e);
+                updateDebug(`Error: Failed to toggle views\nDetails: ${e.message}`);
+            }
+        }
+
+        // Update time display in CDT
+        function updateTimeDisplay() {
+            try {
+                const now = new Date();
+                const options = {
+                    timeZone: 'America/Chicago',
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit',
+                    hour12: true
+                };
+                $('#time-display').text(`Current Time (CDT): ${now.toLocaleString('en-US', options)}`);
+            } catch (e) {
+                console.error('Error in updateTimeDisplay:', e);
+                $('#time-display').text('Current Time (CDT): Error');
+            }
+        }
+
+        // Update debug section in UI
+        function updateDebug(content) {
+            try {
+                $('#debug-content').html(content.replace(/\n/g, '<br>'));
+            } catch (e) {
+                console.error('Error in updateDebug:', e);
+            }
+        }
+
+        // Update fixed high/low temp row
+        function updateFixedRow() {
+            try {
+                if (!allObservations || !Object.keys(allObservations).length) {
+                    $('#fixed-content').html('No data loaded');
+                    console.log('No observations for fixed row');
+                    return;
+                }
+                const highLowVars = ['air_temp_high_6_hour', 'air_temp_low_6_hour', 'air_temp_high_24_hour', 'air_temp_low_24_hour'];
+                const latestValues = {};
+                highLowVars.forEach(v => {
+                    latestValues[v] = null;
+                    if (allObservations[v] && Array.isArray(allObservations[v]) && allObservations[v].length === allTimestamps.length) {
+                        for (let i = allObservations[v].length - 1; i >= 0; i--) {
+                            if (allObservations[v][i] !== null && !isNaN(allObservations[v][i])) {
+                                latestValues[v] = (allObservations[v][i] * 9/5 + 32).toFixed(2);
+                                break;
+                            }
+                        }
+                    }
+                });
+                const content = highLowVars.map(v => {
+                    const label = v.replace('_set_1', '').replace(/_/g, ' ');
+                    return `<strong>${label}:</strong> ${latestValues[v] || 'N/A'} °F`;
+                }).join('<br>');
+                $('#fixed-content').html(content);
+                console.log('Updated fixed row with latest values:', latestValues);
+            } catch (e) {
+                console.error('Error in updateFixedRow:', e);
+                $('#fixed-content').html('Error loading high/low temps');
+            }
+        }
+
+        // Synchronize fixed row horizontal scroll
+        function syncFixedRowScroll() {
+            try {
+                const tableContainer = $('#data-table-container');
+                const fixedRow = $('#fixed-row');
+                fixedRow.scrollLeft(tableContainer.scrollLeft());
+                console.log('Synced fixed row scroll');
+            } catch (e) {
+                console.error('Error in syncFixedRowScroll:', e);
+            }
+        }
+
+        // Convert measurements to American units
+        function convertToAmericanUnits(observations, variables) {
+            console.group('Unit Conversion');
+            const converted = {};
+            const highLowVars = ['air_temp_high_6_hour', 'air_temp_low_6_hour', 'air_temp_high_24_hour', 'air_temp_low_24_hour'];
+            try {
+                variables.forEach(variable => {
+                    if (!observations[variable] || !Array.isArray(observations[variable]) || observations[variable].length !== allTimestamps.length) {
+                        converted[variable] = Array(allTimestamps.length).fill(null);
+                        console.log(`Variable ${variable} missing or length mismatch, filled with nulls`);
+                        return;
+                    }
+                    if (variable.includes('air_temp') || variable.includes('heat_index') || 
+                        variable.includes('dew_point_temperature_set_1d') || variable.includes('wet_bulb_temperature')) {
+                        converted[variable] = observations[variable].map(value =>
+                            value !== null && !isNaN(value) ? (value * 9/5 + 32).toFixed(2) : highLowVars.includes(variable) ? value : null
+                        );
+                        console.log(`Converted ${variable} to Fahrenheit`);
+                    } else if (variable.includes('wind_speed')) {
+                        converted[variable] = observations[variable].map(value =>
+                            value !== null && !isNaN(value) ? (value * 2.23694).toFixed(2) : null
+                        );
+                        console.log(`Converted ${variable} to mph`);
+                    } else if (variable.includes('pressure')) {
+                        converted[variable] = observations[variable].map(value =>
+                            value !== null && !isNaN(value) ? (value * 0.02953).toFixed(2) : null
+                        );
+                        console.log(`Converted ${variable} to inHg`);
+                    } else if (variable.includes('precip_accumulated')) {
+                        converted[variable] = observations[variable].map(value =>
+                            value !== null && !isNaN(value) ? (value * 0.03937).toFixed(2) : null
+                        );
+                        console.log(`Converted ${variable} to inches`);
+                    } else {
+                        converted[variable] = observations[variable];
+                        console.log(`No conversion for ${variable}`);
+                    }
+                });
+            } catch (e) {
+                console.error('Error in convertToAmericanUnits:', e);
+                updateDebug(`Error: Failed to convert units\nDetails: ${e.message}`);
+            }
+            console.groupEnd();
+            return converted;
+        }
+
+        // Display data in HTML table
+        function displayStationData(station) {
+            console.group('Displaying Station Data');
+            const startTime = performance.now();
+            console.log('Processing data for station:', station?.STID || 'unknown');
+
+            try {
+                if (!station || !station.OBSERVATIONS) {
+                    throw new Error(`No OBSERVATIONS in station data: ${JSON.stringify(station)}`);
+                }
+
+                allObservations = station.OBSERVATIONS;
+                allTimestamps = allObservations.date_time || [];
+                if (!allTimestamps.length) {
+                    throw new Error(`No date_time in OBSERVATIONS: ${JSON.stringify(allObservations)}`);
+                }
+
+                const allVariables = Object.keys(allObservations).filter(key => key !== 'date_time');
+                const excludePatterns = /cloud_layer|metar|pressure_change_code|dew_point_temperature_set_1(?!d)/;
+                const variables = allVariables.filter(v => !excludePatterns.test(v));
+
+                // Sort variables
+                const tempVars = variables.filter(v => /air_temp|heat_index|dew_point_temperature_set_1d|wet_bulb_temperature/.test(v));
+                const windVars = variables.filter(v => /wind_/.test(v));
+                const precipVars = variables.filter(v => /precip_/.test(v));
+                const pressureVars = variables.filter(v => /pressure/.test(v));
+                const otherVars = variables.filter(v => !/air_temp|heat_index|dew_point_temperature_set_1d|wet_bulb_temperature|wind_|precip_|pressure/.test(v));
+                const sortedVariables = [...tempVars, ...windVars, ...precipVars, ...pressureVars, ...otherVars];
+
+                console.log('All variables:', allVariables);
+                console.log('Filtered variables:', variables);
+                console.log('Sorted variables:', sortedVariables);
+                console.log('Total timestamps:', allTimestamps.length);
+                console.log('Variable array lengths:', sortedVariables.map(v => ({
+                    variable: v,
+                    length: allObservations[v]?.length || 0
+                })));
+
+                // Prepare data
+                const filteredObservations = {};
+                sortedVariables.forEach(v => {
+                    filteredObservations[v] = allObservations[v] && Array.isArray(allObservations[v]) && allObservations[v].length === allTimestamps.length
+                        ? allObservations[v]
+                        : Array(allTimestamps.length).fill(null);
+                    if (!allObservations[v]) {
+                        console.log(`Variable ${v} missing in observations, filled with nulls`);
+                    } else if (allObservations[v].length !== allTimestamps.length) {
+                        console.log(`Variable ${v} length mismatch: ${allObservations[v].length} vs ${allTimestamps.length}, filled with nulls`);
+                    }
+                });
+                const convertedObservations = convertToAmericanUnits(filteredObservations, sortedVariables);
+
+                // Update view title
+                const now = luxon.DateTime.now().setZone('America/Chicago');
+                lastUpdateTime = now.isValid ? now.toFormat('MM/dd/yyyy HH:mm:ss') : 'N/A';
+                $('#data-view-title').text(`Station: ${station.STID} | Last Updated: ${lastUpdateTime}`);
+
+                // Update table headers
+                const headers = ['Timestamp', ...sortedVariables.map(v => {
+                    let label = v.replace('_set_1', '').replace(/_set_1d/, '').replace(/_/g, ' ');
+                    if (v.includes('air_temp') || v.includes('heat_index') || 
+                        v.includes('dew_point_temperature') || v.includes('wet_bulb_temperature')) return `${label} (°F)`;
+                    if (v.includes('wind_speed')) return `${label} (mph)`;
+                    if (v.includes('pressure')) return `${label} (inHg)`;
+                    if (v.includes('precip_accumulated')) return `${label} (in)`;
+                    return label;
+                })];
+                $('#data-table thead tr').html(headers.map(h => `<th>${h}</th>`).join(''));
+
+                // Prepare table rows
+                const highLowVars = ['air_temp_high_6_hour', 'air_temp_low_6_hour', 'air_temp_high_24_hour', 'air_temp_low_24_hour'];
+                const rows = allTimestamps.map((time, index) => {
+                    let parsedTime;
+                    try {
+                        parsedTime = luxon.DateTime.fromISO(time, { zone: 'America/Chicago' });
+                        if (!parsedTime.isValid) {
+                            console.warn(`Invalid timestamp at index ${index}: ${time}`);
+                            parsedTime = '(invalid date)';
+                        } else {
+                            parsedTime = parsedTime.toFormat('MM/dd/yyyy HH:mm:ss');
+                        }
+                    } catch (e) {
+                        console.warn(`Error parsing timestamp at index ${index}: ${time}`, e);
+                        parsedTime = '(invalid date)';
+                    }
+                    const hasHighLow = highLowVars.some(v => {
+                        if (!convertedObservations[v]) {
+                            console.log(`Variable ${v} not found in convertedObservations`);
+                            return false;
+                        }
+                        const value = convertedObservations[v][index];
+                        return value !== null && !isNaN(value);
+                    });
+                    const rowClass = hasHighLow ? 'highlighted' : '';
+                    const cells = [
+                        `<td>${parsedTime}</td>`,
+                        ...sortedVariables.map(v => {
+                            if (!convertedObservations[v]) {
+                                console.log(`Variable ${v} missing in convertedObservations at index ${index}`);
+                                return `<td>N/A</td>`;
+                            }
+                            const value = convertedObservations[v][index] !== null && !isNaN(convertedObservations[v][index]) ? convertedObservations[v][index] : 'N/A';
+                            const cellClass = highLowVars.includes(v) && value !== 'N/A' ? 'high-low' : '';
+                            return `<td class="${cellClass}">${value}</td>`;
+                        })
+                    ];
+                    return `<tr class="${rowClass}">${cells.join('')}</tr>`;
+                });
+
+                $('#data-table tbody').html(rows.join(''));
+                updateFixedRow();
+                $('#data-table-container').off('scroll').on('scroll', syncFixedRowScroll);
+                console.log('Table data sample (first 2 rows):', rows.slice(0, 2));
+                console.log('Total rows:', rows.length);
+                const duration = performance.now() - startTime;
+                console.log('Table rendering completed in', duration.toFixed(2), 'ms');
+                toggleViews();
+            } catch (e) {
+                console.error('Error in displayStationData:', e);
+                updateDebug(`Error: Failed to display station data\nDetails: ${e.message}`);
+                $('#data-table tbody').html('');
+                $('#fixed-content').html('No data loaded');
+                $('#data-view-title').text(`Station: ${currentStationId} | Last Updated: N/A`);
+                toggleViews();
+            }
+            console.groupEnd();
+        }
+
+        // Fetch time series data for 3 days
+        function fetchStationData(stationId, startDate, endDate) {
+            console.group('Fetching Station Data');
+            const startTime = performance.now();
+            console.log('Request started at', new Date().toISOString());
+
+            const formatDate = (date) => {
+                try {
+                    const year = date.getUTCFullYear();
+                    const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+                    const day = String(date.getUTCDate()).padStart(2, '0');
+                    const hours = String(date.getUTCHours()).padStart(2, '0');
+                    const minutes = String(date.getUTCMinutes()).padStart(2, '0');
+                    return `${year}${month}${day}${hours}${minutes}`;
+                } catch (e) {
+                    console.error('Error in formatDate:', e);
+                    return '';
+                }
+            };
+
+            const startFormatted = formatDate(startDate);
+            const endFormatted = formatDate(endDate);
+            if (!startFormatted || !endFormatted) {
+                console.error('Invalid date formatting:', { startDate, endDate });
+                updateDebug('Error: Invalid date formatting for API request');
+                return;
+            }
+
+            const url = `${API_BASE_URL}stations/timeseries?stid=${stationId}&start=${startFormatted}&end=${endFormatted}&token=${API_TOKEN}&obtimezone=local`;
+
+            console.log('API URL:', url);
+            updateDebug(`API URL: ${url}\nStatus: Fetching...`);
+
+            $.ajax({
+                url: url,
+                method: 'GET',
+                beforeSend: function() {
+                    console.log('Sending API request...');
+                },
+                success: function (data, status, xhr) {
+                    const duration = performance.now() - startTime;
+                    console.log('Request completed in', duration.toFixed(2), 'ms');
+                    console.log('HTTP Status:', xhr.status);
+                    console.log('Response Size:', JSON.stringify(data).length, 'bytes');
+                    console.log('Raw Response (summary):', {
+                        stationCount: data.STATION?.length,
+                        observations: data.STATION?.[0]?.OBSERVATIONS ? Object.keys(data.STATION[0].OBSERVATIONS) : null,
+                        responseCode: data.SUMMARY?.RESPONSE_CODE,
+                        responseMessage: data.SUMMARY?.RESPONSE_MESSAGE
+                    });
+
+                    updateDebug(`API URL: ${url}\nStatus: Success\nHTTP Status: ${xhr.status}\nResponse Size: ${JSON.stringify(data).length} bytes`);
+
+                    try {
+                        if (data.STATION && data.STATION[0] && data.STATION[0].OBSERVATIONS && data.SUMMARY.RESPONSE_CODE === 1) {
+                            console.log('Valid data received for station:', data.STATION[0].STID);
+                            console.log('Observations:', Object.keys(data.STATION[0].OBSERVATIONS));
+                            currentStationId = data.STATION[0].STID;
+                            displayStationData(data.STATION[0]);
+                        } else {
+                            throw new Error(`Invalid station or no observation data: ${data.SUMMARY?.RESPONSE_MESSAGE || 'Unknown error'}`);
+                        }
+                    } catch (e) {
+                        console.error('Error processing API response:', e);
+                        updateDebug(`API URL: ${url}\nStatus: Failed\nError: Station name invalid\nResponse: ${e.message}`);
+                        alert('Station name invalid. Check debug info.');
+                        $('#data-table tbody').html('');
+                        $('#fixed-content').html('No data loaded');
+                        $('#data-view-title').text(`Station: ${stationId} | Last Updated: N/A`);
+                        toggleViews();
+                    }
+                    console.groupEnd();
+                },
+                error: function (xhr, status, error) {
+                    const duration = performance.now() - startTime;
+                    console.error('Request failed after', duration.toFixed(2), 'ms');
+                    console.error('Status:', status);
+                    console.error('Error:', error);
+                    console.error('Response Text:', xhr.responseText);
+                    updateDebug(`API URL: ${url}\nStatus: Failed\nError: Station name invalid\nResponse: ${xhr.responseText || 'N/A'}`);
+                    alert('Station name invalid. Check debug info.');
+                    $('#data-table tbody').html('');
+                    $('#fixed-content').html('No data loaded');
+                    $('#data-view-title').text(`Station: ${stationId} | Last Updated: N/A`);
+                    toggleViews();
+                    console.groupEnd();
+                }
+            });
+        }
+
+        // Initialize and set up event listeners
+        $(document).ready(function () {
+            console.group('Application Initialization');
+            console.log('Document ready at', new Date().toISOString());
+
+            // Initial 3-day period
+            let currentEndDate = new Date();
+            let currentStartDate = new Date(currentEndDate.getTime() - 3 * 24 * 60 * 60 * 1000);
+
+            // Update time display every second
+            updateTimeDisplay();
+            setInterval(updateTimeDisplay, 1000);
+
+            $('#search-button').on('click', function() {
+                try {
+                    const stationId = $('#station-input').val().trim().toUpperCase();
+                    console.log('Search button clicked at', new Date().toISOString(), 'for station:', stationId);
+                    if (stationId) {
+                        // Reset to current 3-day period
+                        currentEndDate = new Date();
+                        currentStartDate = new Date(currentEndDate.getTime() - 3 * 24 * 60 * 60 * 1000);
+                        fetchStationData(stationId, currentStartDate, currentEndDate);
+                    } else {
+                        updateDebug('Status: Failed\nError: Station ID cannot be empty');
+                        alert('Please enter a station ID.');
+                    }
+                } catch (e) {
+                    console.error('Error in search button handler:', e);
+                    updateDebug(`Error: Search failed\nDetails: ${e.message}`);
+                }
+            });
+
+            $('#station-input').on('keypress', function(e) {
+                if (e.which === 13) { // Enter key
+                    $('#search-button').click();
+                }
+            });
+
+            $('#next-day-button').on('click', function() {
+                try {
+                    console.log('Next day button clicked at', new Date().toISOString());
+                    currentStartDate = new Date(currentStartDate.getTime() + 3 * 24 * 60 * 60 * 1000);
+                    currentEndDate = new Date(currentEndDate.getTime() + 3 * 24 * 60 * 60 * 1000);
+                    const stationId = $('#station-input').val().trim().toUpperCase() || 'KDFW';
+                    console.log('Fetching next 3 days:', currentStartDate.toISOString(), 'to', currentEndDate.toISOString());
+                    fetchStationData(stationId, currentStartDate, currentEndDate);
+                } catch (e) {
+                    console.error('Error in next day button handler:', e);
+                    updateDebug(`Error: Next day fetch failed\nDetails: ${e.message}`);
+                }
+            });
+
+            console.log('Event listeners set up');
+            console.groupEnd();
+        });
+    </script>
+</body>
+</html>
