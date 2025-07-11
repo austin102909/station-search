@@ -9,45 +9,67 @@
     <style>
         body {
             padding: 20px;
-            background-color: #f8f9fa;
+            background-color: #e9ecef;
             display: flex;
             flex-direction: column;
             align-items: center;
             min-height: 100vh;
             margin: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            margin-top: 15vh; /* Pushes content down from the top */
+            max-width: 800px;
+            width: 100%;
         }
         .search-container {
-            margin: 20px 0;
+            margin: 30px 0;
             max-width: 600px;
             width: 100%;
             display: flex;
-            gap: 10px;
+            gap: 15px;
+            align-items: center;
         }
         #station-input {
             flex-grow: 1;
+            border-radius: 20px;
+            padding: 10px 20px;
+            border: 1px solid #ced4da;
+        }
+        #search-button {
+            border-radius: 20px;
+            padding: 10px 30px;
+            background-color: #007bff;
+            border: none;
+            transition: background-color 0.3s;
+        }
+        #search-button:hover {
+            background-color: #0056b3;
         }
         #debug-section {
             max-width: 600px;
             margin: 20px 0;
             background-color: #fff;
-            padding: 15px;
-            border-radius: 5px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
             font-size: 14px;
             word-wrap: break-word;
         }
         #time-display {
-            position: absolute;
-            top: 10px;
-            left: 10px;
+            position: fixed;
+            top: 20px;
+            right: 20px;
             font-size: 14px;
             background-color: #fff;
-            padding: 5px 10px;
-            border-radius: 5px;
+            padding: 8px 15px;
+            border-radius: 10px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        #next-day-button {
-            margin: 20px 0;
+            z-index: 1000;
         }
         #data-view {
             display: none;
@@ -59,22 +81,27 @@
             background-color: #fff;
             z-index: 2000;
             overflow-y: auto;
-            padding: 20px;
+            padding: 40px;
         }
         #data-view-header {
             display: flex;
             align-items: center;
-            margin-bottom: 20px;
+            margin-bottom: 30px;
         }
         .back-arrow {
-            font-size: 1.5rem;
+            font-size: 1.8rem;
             cursor: pointer;
-            color: #000;
-            margin-right: 15px;
+            color: #007bff;
+            margin-right: 20px;
+            transition: color 0.3s;
+        }
+        .back-arrow:hover {
+            color: #0056b3;
         }
         #data-view-title {
-            font-size: 1.5rem;
-            font-weight: bold;
+            font-size: 1.8rem;
+            font-weight: 600;
+            color: #343a40;
         }
         #data-table-container {
             width: 100%;
@@ -82,7 +109,8 @@
             overflow-x: auto;
             max-height: 400px;
             overflow-y: auto;
-            border: 1px solid #ccc;
+            border: 1px solid #dee2e6;
+            border-radius: 10px;
         }
         #data-table {
             width: 100%;
@@ -91,8 +119,8 @@
             font-size: 14px;
         }
         #data-table th, #data-table td {
-            border: 1px solid #ccc;
-            padding: 8px 12px;
+            border: 1px solid #dee2e6;
+            padding: 12px 15px;
             min-width: 120px;
             text-align: left;
         }
@@ -104,7 +132,7 @@
             z-index: 100;
         }
         #data-table tr.highlighted {
-            background-color: #e9ecef;
+            background-color: #f1f3f5;
         }
         #data-table td.high-low {
             font-weight: bold;
@@ -112,12 +140,12 @@
         }
         #fixed-measurements-row {
             width: 100%;
-            background-color: #e9ecef;
-            border: 1px solid #ccc;
+            background-color: #f1f3f5;
+            border: 1px solid #dee2e6;
             font-size: 14px;
             text-align: left;
             position: sticky;
-            top: 37px; /* Adjust based on header height */
+            top: 37px;
             z-index: 90;
             overflow-x: auto;
             white-space: nowrap;
@@ -128,22 +156,23 @@
             border-collapse: collapse;
         }
         #fixed-measurements-row td {
-            border: 1px solid #ccc;
-            padding: 8px 12px;
+            border: 1px solid #dee2e6;
+            padding: 12px 15px;
             min-width: 120px;
         }
         #summary-table {
             width: 100%;
             max-width: 100%;
-            margin-top: 20px;
+            margin-top: 30px;
             border-collapse: collapse;
             font-size: 14px;
             background-color: #fff;
-            border: 1px solid #ccc;
+            border: 1px solid #dee2e6;
+            border-radius: 10px;
         }
         #summary-table th, #summary-table td {
-            border: 1px solid #ccc;
-            padding: 8px 12px;
+            border: 1px solid #dee2e6;
+            padding: 12px 15px;
             text-align: left;
         }
         #summary-table th {
@@ -154,39 +183,56 @@
             font-weight: bold;
             color: #dc3545;
         }
+        .container h1 {
+            font-size: 2.5rem;
+            color: #343a40;
+            margin-bottom: 30px;
+            text-align: center;
+        }
         @media (max-width: 576px) {
             body {
-                padding: 10px;
+                padding: 15px;
+            }
+            .container {
+                margin-top: 10vh; /* Slightly less offset on smaller screens */
             }
             .search-container {
                 flex-direction: column;
-                gap: 5px;
+                gap: 10px;
             }
             #debug-section, #time-display {
                 font-size: 12px;
-                margin: 10px;
+                margin: 15px;
             }
             #data-table-container {
                 font-size: 12px;
             }
             .btn {
                 font-size: 14px;
-                padding: 8px 16px;
+                padding: 8px 20px;
             }
             #data-table th, #data-table td {
                 min-width: 80px;
+                padding: 8px 10px;
             }
             #data-view {
-                padding: 10px;
+                padding: 20px;
             }
             #data-view-title {
-                font-size: 1.2rem;
+                font-size: 1.4rem;
             }
             #fixed-measurements-row {
-                top: 33px; /* Adjust for smaller header height */
+                top: 33px;
             }
             #summary-table {
                 font-size: 12px;
+            }
+            #time-display {
+                top: 10px;
+                right: 10px;
+            }
+            .container h1 {
+                font-size: 1.8rem;
             }
         }
     </style>
@@ -195,8 +241,8 @@
     <!-- Main View -->
     <div id="main-view">
         <div id="time-display">Current Time (CDT): Loading...</div>
-        <div class="container text-center">
-            <h1 class="mb-4">Synoptic Weather Data</h1>
+        <div class="container">
+            <h1>Synoptic Weather Data</h1>
             <div class="search-container">
                 <input type="text" id="station-input" class="form-control" value="KDFW" placeholder="Enter station ID (e.g., KDFW)">
                 <button id="search-button" class="btn btn-primary">Search</button>
@@ -205,7 +251,6 @@
                 <strong>Debug Info:</strong><br>
                 <span id="debug-content">Enter a station ID and click Search</span>
             </div>
-            <button id="next-day-button" class="btn btn-secondary">Generate Next Day</button>
         </div>
     </div>
 
@@ -532,66 +577,60 @@
                 const excludePatterns = /cloud_layer|metar|pressure_change_code|dew_point_temperature_set_1(?!d)|air_temp_high_6_hour_set_1|air_temp_low_6_hour_set_1|air_temp_high_24_hour_set_1|air_temp_low_24_hour_set_1|precip_accum_one_hour_set_1|precip_accum_three_hour_set_1|precip_accum_six_hour_set_1|precip_accum_24_hour_set_1|sea_level_pressure_set_1$|sea_level_pressure_tendency$|weather_cond_code_set_1/;
                 const variables = allVariables.filter(v => !excludePatterns.test(v));
 
-                // Sort variables by groups (with correct regex for your variables)
-const tempVars = variables.filter(v => 
-  /air_temp_set_1$|dew_point_temperature_set_1d|wet_bulb_temp_set_1d|heat_index_set_1d|relative_humidity_set_1/.test(v)
-);
+                // Sort variables by groups
+                const tempVars = variables.filter(v => 
+                    /air_temp_set_1$|dew_point_temperature_set_1d|wet_bulb_temp_set_1d|heat_index_set_1d|relative_humidity_set_1/.test(v)
+                );
+                const windVars = variables.filter(v => 
+                    /wind_speed_set_1|wind_direction_set_1|wind_gust_set_1|wind_cardinal_direction_set_1d/.test(v)
+                );
+                const pressureVars = variables.filter(v => 
+                    /pressure_set_1d|altimeter_set_1|sea_level_pressure_set_1d|pressure_tendency_set_1/.test(v)
+                );
+                const otherVars = variables.filter(v => 
+                    !/air_temp_set_1$|dew_point_temperature_set_1d|wet_bulb_temp_set_1d|heat_index_set_1d|relative_humidity_set_1|wind_speed_set_1|wind_direction_set_1|wind_gust_set_1|wind_cardinal_direction_set_1d|pressure_set_1d|altimeter_set_1|sea_level_pressure_set_1d|pressure_tendency_set_1/.test(v)
+                );
 
-const windVars = variables.filter(v => 
-  /wind_speed_set_1|wind_direction_set_1|wind_gust_set_1|wind_cardinal_direction_set_1d/.test(v)
-);
+                let sortedVariables = [...tempVars, ...windVars, ...pressureVars, ...otherVars];
 
-const pressureVars = variables.filter(v => 
-  /pressure_set_1d|altimeter_set_1|sea_level_pressure_set_1d|pressure_tendency_set_1/.test(v)
-);
+                const preferredOrder = [
+                    "air_temp_set_1",                   // Air Temperature: °F
+                    "relative_humidity_set_1",         // Relative Humidity: %
+                    "wind_speed_set_1",                // Wind Speed: mph
+                    "heat_index_set_1d",               // Heat Index: °F
+                    "weather_summary_set_1d",          // Weather Summary
+                    "wind_cardinal_direction_set_1d",  // Wind Cardinal Direction
+                    "wind_gust_set_1",                 // Wind Gust: mph
+                    "visibility_set_1",                // Visibility: miles
+                    "weather_condition_set_1d",        // Weather Condition
+                    "dew_point_temperature_set_1d",    // Dew Point Temperature: °F
+                    "ceiling_set_1",                   // Ceiling Height: ft
+                    "pressure_set_1d",                 // Station Pressure: mbar
+                    "sea_level_pressure_set_1d",       // Sea Level Pressure: mbar
+                    "altimeter_set_1",                 // Altimeter Setting: inHg
+                    "pressure_tendency_set_1",         // Pressure Tendency
+                    "wet_bulb_temp_set_1d",            // Wet Bulb Temperature: °F
+                    "wind_direction_set_1",            // Wind Direction: °
+                    "peak_wind_speed_set_1",           // Peak Wind Speed (optional)
+                    "peak_wind_direction_set_1"        // Peak Wind Direction (optional)
+                ];
 
-const otherVars = variables.filter(v => 
-  !/air_temp_set_1$|dew_point_temperature_set_1d|wet_bulb_temp_set_1d|heat_index_set_1d|relative_humidity_set_1|wind_speed_set_1|wind_direction_set_1|wind_gust_set_1|wind_cardinal_direction_set_1d|pressure_set_1d|altimeter_set_1|sea_level_pressure_set_1d|pressure_tendency_set_1/.test(v)
-);
+                // Reorder sortedVariables by preferredOrder, keeping any extras at the end
+                const preferredSet = new Set(preferredOrder);
+                sortedVariables = [
+                    ...preferredOrder.filter(v => sortedVariables.includes(v)),
+                    ...sortedVariables.filter(v => !preferredSet.has(v))
+                ];
 
-let sortedVariables = [...tempVars, ...windVars, ...pressureVars, ...otherVars];
-
-const preferredOrder = [
-  "air_temp_set_1",                   // Air Temperature: °F
-  "relative_humidity_set_1",         // Relative Humidity: %
-  "wind_speed_set_1",                // Wind Speed: mph
-  "heat_index_set_1d",               // Heat Index: °F
-  "weather_summary_set_1d",         // Weather Summary
-  "wind_cardinal_direction_set_1d", // Wind Cardinal Direction
-  "wind_gust_set_1",                 // Wind Gust: mph
-  "visibility_set_1",                // Visibility: miles — CORRECTED HERE
-  "weather_condition_set_1d",       // Weather Condition
-  "dew_point_temperature_set_1d",   // Dew Point Temperature: °F
-  "ceiling_set_1",                  // Ceiling Height: ft
-  "pressure_set_1d",                // Station Pressure: mbar
-  "sea_level_pressure_set_1d",      // Sea Level Pressure: mbar
-  "altimeter_set_1",                // Altimeter Setting: inHg
-  "pressure_tendency_set_1",        // Pressure Tendency
-  "wet_bulb_temp_set_1d",           // Wet Bulb Temperature: °F
-  "wind_direction_set_1",           // Wind Direction: °
-  "peak_wind_speed_set_1",          // Peak Wind Speed (optional)
-  "peak_wind_direction_set_1"       // Peak Wind Direction (optional)
-];
-
-// Reorder sortedVariables by preferredOrder, keeping any extras at the end
-const preferredSet = new Set(preferredOrder);
-sortedVariables = [
-  ...preferredOrder.filter(v => sortedVariables.includes(v)),
-  ...sortedVariables.filter(v => !preferredSet.has(v))
-];
-
-// Debug logs (optional)
-console.log('All variables:', allVariables);
-console.log('Filtered variables:', variables);
-console.log('Sorted variables:', sortedVariables);
-console.log('Total timestamps:', allTimestamps.length);
-console.log('Variable array lengths:', allVariables.map(v => ({
-  variable: v,
-  length: allObservations[v]?.length || 0,
-  sample: allObservations[v]?.slice(-5) || []
-})));
-
-
+                console.log('All variables:', allVariables);
+                console.log('Filtered variables:', variables);
+                console.log('Sorted variables:', sortedVariables);
+                console.log('Total timestamps:', allTimestamps.length);
+                console.log('Variable array lengths:', allVariables.map(v => ({
+                    variable: v,
+                    length: allObservations[v]?.length || 0,
+                    sample: allObservations[v]?.slice(-5) || []
+                })));
 
                 // Prepare data, reversing observation arrays
                 const filteredObservations = {};
@@ -613,32 +652,31 @@ console.log('Variable array lengths:', allVariables.map(v => ({
                 $('#data-view-title').text(`Station: ${station.STID} | Last Updated: ${lastUpdateTime}`);
 
                 // Mapping for official labels with units
-const officialLabels = {
-  "air_temp_set_1": "Air Temperature: °F",
-  "relative_humidity_set_1": "Relative Humidity: %",
-  "wind_speed_set_1": "Wind Speed: mph",
-  "heat_index_set_1d": "Heat Index: °F",
-  "weather_summary_set_1d": "Weather Summary",
-  "wind_cardinal_direction_set_1d": "Wind Cardinal Direction",
-  "wind_gust_set_1": "Wind Gust: mph",
-  "weather_condition_set_1d": "Weather Condition",
-  "dew_point_temperature_set_1d": "Dew Point Temperature: °F",
-  "visibility_set_1": "Visibility: miles",
-  "ceiling_set_1": "Ceiling Height: ft",
-  "pressure_set_1d": "Station Pressure: mbar",
-  "sea_level_pressure_set_1d": "Sea Level Pressure: mbar",
-  "altimeter_set_1": "Altimeter Setting: inHg",
-  "pressure_tendency_set_1": "Pressure Tendency",
-  "wet_bulb_temp_set_1d": "Wet Bulb Temperature: °F",
-  "wind_direction_set_1": "Wind Direction: °",
-  // Add these:
-  "peak_wind_speed_set_1": "Peak Wind Speed: mph",
-  "peak_wind_direction_set_1": "Peak Wind Direction: °"
-};
-// Update table headers
-const headers = ['Timestamp', ...sortedVariables.map(v => officialLabels[v] || v)];
-$('#data-table thead tr').html(headers.map(h => `<th>${h}</th>`).join(''));
+                const officialLabels = {
+                    "air_temp_set_1": "Air Temperature: °F",
+                    "relative_humidity_set_1": "Relative Humidity: %",
+                    "wind_speed_set_1": "Wind Speed: mph",
+                    "heat_index_set_1d": "Heat Index: °F",
+                    "weather_summary_set_1d": "Weather Summary",
+                    "wind_cardinal_direction_set_1d": "Wind Cardinal Direction",
+                    "wind_gust_set_1": "Wind Gust: mph",
+                    "weather_condition_set_1d": "Weather Condition",
+                    "dew_point_temperature_set_1d": "Dew Point Temperature: °F",
+                    "visibility_set_1": "Visibility: miles",
+                    "ceiling_set_1": "Ceiling Height: ft",
+                    "pressure_set_1d": "Station Pressure: mbar",
+                    "sea_level_pressure_set_1d": "Sea Level Pressure: mbar",
+                    "altimeter_set_1": "Altimeter Setting: inHg",
+                    "pressure_tendency_set_1": "Pressure Tendency",
+                    "wet_bulb_temp_set_1d": "Wet Bulb Temperature: °F",
+                    "wind_direction_set_1": "Wind Direction: °",
+                    "peak_wind_speed_set_1": "Peak Wind Speed: mph",
+                    "peak_wind_direction_set_1": "Peak Wind Direction: °"
+                };
 
+                // Update table headers
+                const headers = ['Timestamp', ...sortedVariables.map(v => officialLabels[v] || v)];
+                $('#data-table thead tr').html(headers.map(h => `<th>${h}</th>`).join(''));
 
                 // Initialize fixed measurements row
                 const fixedCells = sortedVariables.map(v => `<td>${lastNonNullValues[v]}</td>`);
@@ -824,20 +862,6 @@ $('#data-table thead tr').html(headers.map(h => `<th>${h}</th>`).join(''));
             $('#station-input').on('keypress', function(e) {
                 if (e.which === 13) { // Enter key
                     $('#search-button').click();
-                }
-            });
-
-            $('#next-day-button').on('click', function() {
-                try {
-                    console.log('Next day button clicked at', new Date().toISOString());
-                    currentStartDate = new Date(currentStartDate.getTime() + 3 * 24 * 60 * 60 * 1000);
-                    currentEndDate = new Date(currentEndDate.getTime() + 3 * 24 * 60 * 1000);
-                    const stationId = $('#station-input').val().trim().toUpperCase() || 'KDFW';
-                    console.log('Fetching next 3 days:', currentStartDate.toISOString(), 'to', currentEndDate.toISOString());
-                    fetchStationData(stationId, currentStartDate, currentEndDate);
-                } catch (e) {
-                    console.error('Error in next day button handler:', e);
-                    updateDebug(`Error: Next day fetch failed\nDetails: ${e.message}`);
                 }
             });
 
