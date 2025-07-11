@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Synoptic Weather Data</title>
-    <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         body {
@@ -21,8 +20,7 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: flex-start;
-            margin-top: 15vh; /* Pushes content down from the top */
+            margin-top: 15vh;
             max-width: 800px;
             width: 100%;
         }
@@ -63,7 +61,7 @@
         #time-display {
             position: fixed;
             top: 20px;
-            right: 20px;
+            left: 20px;
             font-size: 14px;
             background-color: #fff;
             padding: 8px 15px;
@@ -105,7 +103,6 @@
         }
         #data-table-container {
             width: 100%;
-            max-width: 100%;
             overflow-x: auto;
             max-height: 400px;
             overflow-y: auto;
@@ -143,7 +140,6 @@
             background-color: #f1f3f5;
             border: 1px solid #dee2e6;
             font-size: 14px;
-            text-align: left;
             position: sticky;
             top: 37px;
             z-index: 90;
@@ -162,7 +158,6 @@
         }
         #summary-table {
             width: 100%;
-            max-width: 100%;
             margin-top: 30px;
             border-collapse: collapse;
             font-size: 14px;
@@ -190,55 +185,23 @@
             text-align: center;
         }
         @media (max-width: 576px) {
-            body {
-                padding: 15px;
-            }
-            .container {
-                margin-top: 10vh; /* Slightly less offset on smaller screens */
-            }
-            .search-container {
-                flex-direction: column;
-                gap: 10px;
-            }
-            #debug-section, #time-display {
-                font-size: 12px;
-                margin: 15px;
-            }
-            #data-table-container {
-                font-size: 12px;
-            }
-            .btn {
-                font-size: 14px;
-                padding: 8px 20px;
-            }
-            #data-table th, #data-table td {
-                min-width: 80px;
-                padding: 8px 10px;
-            }
-            #data-view {
-                padding: 20px;
-            }
-            #data-view-title {
-                font-size: 1.4rem;
-            }
-            #fixed-measurements-row {
-                top: 33px;
-            }
-            #summary-table {
-                font-size: 12px;
-            }
-            #time-display {
-                top: 10px;
-                right: 10px;
-            }
-            .container h1 {
-                font-size: 1.8rem;
-            }
+            body { padding: 15px; }
+            .container { margin-top: 10vh; }
+            .search-container { flex-direction: column; gap: 10px; }
+            #debug-section, #time-display { font-size: 12px; margin: 15px; }
+            #data-table-container { font-size: 12px; }
+            .btn { font-size: 14px; padding: 8px 20px; }
+            #data-table th, #data-table td { min-width: 80px; padding: 8px 10px; }
+            #data-view { padding: 20px; }
+            #data-view-title { font-size: 1.4rem; }
+            #fixed-measurements-row { top: 33px; }
+            #summary-table { font-size: 12px; }
+            #time-display { top: 10px; left: 10px; }
+            .container h1 { font-size: 1.8rem; }
         }
     </style>
 </head>
 <body>
-    <!-- Main View -->
     <div id="main-view">
         <div id="time-display">Current Time (CDT): Loading...</div>
         <div class="container">
@@ -253,8 +216,6 @@
             </div>
         </div>
     </div>
-
-    <!-- Full-Screen Data View -->
     <div id="data-view">
         <div id="data-view-header">
             <span class="back-arrow" onclick="toggleViews()">←</span>
@@ -262,544 +223,211 @@
         </div>
         <div id="data-table-container">
             <table id="data-table" class="table">
-                <thead>
-                    <tr>
-                        <th>Timestamp</th>
-                        <!-- Dynamic columns -->
-                    </tr>
-                </thead>
+                <thead><tr><th>Timestamp</th></tr></thead>
                 <tbody></tbody>
             </table>
             <div id="fixed-measurements-row">
-                <table>
-                    <tr id="fixed-measurements-content">
-                        <td>Latest Measurements</td>
-                        <!-- Dynamic cells -->
-                    </tr>
-                </table>
+                <table><tr id="fixed-measurements-content"><td>Latest Measurements</td></tr></table>
             </div>
         </div>
         <table id="summary-table">
-            <thead>
-                <tr>
-                    <th>Variable</th>
-                    <th>Last Recorded Value</th>
-                </tr>
-            </thead>
+            <thead><tr><th>Variable</th><th>Last Recorded Value</th></tr></thead>
             <tbody id="summary-table-body"></tbody>
         </table>
     </div>
-
-    <!-- jQuery -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <!-- Luxon for date formatting -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/luxon/3.4.4/luxon.min.js"></script>
     <script>
         const API_TOKEN = '81ebbb6ea61247ac85cb88a96d97fcf2';
         const API_BASE_URL = 'https://api.synopticdata.com/v2/';
-        let allObservations = [];
-        let allTimestamps = [];
-        let currentStationId = 'KDFW';
-        let lastUpdateTime = '';
-
-        // METAR pressure tendency codes
-        const pressureTendencyCodes = {
-            0: "Rising, then falling",
-            1: "Rising slowly",
-            2: "Rising steadily",
-            3: "Rising quickly",
-            4: "Steady",
-            5: "Falling, then rising",
-            6: "Falling slowly",
-            7: "Falling steadily",
-            8: "Falling quickly"
-        };
-
-        // Toggle between main and data views
+        let allObservations = [], allTimestamps = [], currentStationId = 'KDFW';
+        const pressureTendencyCodes = {0:"Rising, then falling",1:"Rising slowly",2:"Rising steadily",3:"Rising quickly",4:"Steady",5:"Falling, then rising",6:"Falling slowly",7:"Falling steadily",8:"Falling quickly"};
         function toggleViews() {
-            console.log('Toggling views at', new Date().toISOString());
-            try {
-                const mainView = $('#main-view');
-                const dataView = $('#data-view');
-                if (!mainView.length || !dataView.length) {
-                    throw new Error('Main or data view DOM element missing');
-                }
-                if (dataView.is(':visible')) {
-                    dataView.hide();
-                    mainView.show();
-                    console.log('Switched to main view');
-                } else {
-                    mainView.hide();
-                    dataView.show();
-                    console.log('Switched to data view');
-                }
-            } catch (e) {
-                console.error('Error in toggleViews:', e);
-                updateDebug(`Error: Failed to toggle views\nDetails: ${e.message}`);
-            }
+            const mainView = $('#main-view'), dataView = $('#data-view');
+            if (dataView.is(':visible')) { dataView.hide(); mainView.show(); }
+            else { mainView.hide(); dataView.show(); }
         }
-
-        // Update time display in CDT
         function updateTimeDisplay() {
-            try {
-                const now = new Date();
-                const options = {
-                    timeZone: 'America/Chicago',
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    second: '2-digit',
-                    hour12: true
-                };
-                $('#time-display').text(`Current Time (CDT): ${now.toLocaleString('en-US', options)}`);
-            } catch (e) {
-                console.error('Error in updateTimeDisplay:', e);
-                $('#time-display').text('Current Time (CDT): Error');
-            }
+            const now = new Date();
+            const options = { timeZone: 'America/Chicago', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true };
+            $('#time-display').text(`Current Time (CDT): ${now.toLocaleString('en-US', options)}`);
         }
-
-        // Update debug section in UI
         function updateDebug(content) {
-            try {
-                $('#debug-content').html(content.replace(/\n/g, '<br>'));
-            } catch (e) {
-                console.error('Error in updateDebug:', e);
-            }
+            $('#debug-content').html(content.replace(/\n/g, '<br>'));
         }
-
-        // Convert measurements to American units and track last non-null values
         function convertToAmericanUnits(observations, variables) {
-            console.group('Unit Conversion');
-            const converted = {};
-            const lastNonNullValues = {};
-            const excludedVars = [
-                'air_temp_high_6_hour_set_1', 'air_temp_low_6_hour_set_1', 'air_temp_high_24_hour_set_1', 'air_temp_low_24_hour_set_1',
-                'precip_accum_one_hour_set_1', 'precip_accum_three_hour_set_1', 'precip_accum_six_hour_set_1', 'precip_accum_24_hour_set_1'
-            ];
-            try {
-                variables.forEach(variable => {
-                    if (!observations[variable] || !Array.isArray(observations[variable]) || observations[variable].length !== allTimestamps.length) {
-                        if (!excludedVars.includes(variable)) {
-                            converted[variable] = Array(allTimestamps.length).fill(null);
-                            lastNonNullValues[variable] = 'N/A';
-                        }
-                        console.log(`Variable ${variable} missing or length mismatch, ${excludedVars.includes(variable) ? 'skipped (excluded)' : 'filled with nulls'}`);
-                        return;
-                    }
-                    let lastNonNull = null;
-                    converted[variable] = observations[variable].map((value, index) => {
-                        if (value !== null && value !== '' && !isNaN(parseFloat(value))) {
-                            lastNonNull = parseFloat(value);
-                            if (variable.includes('air_temp') || variable.includes('heat_index') || 
-                                variable.includes('dew_point_temperature_set_1d') || variable.includes('wet_bulb_temperature_set_1') || 
-                                variable.includes('wet_bulb_temp_set_1')) {
-                                const fahrenheit = (lastNonNull * 9/5 + 32).toFixed(2);
-                                if (variable.includes('wet_bulb_temperature_set_1')) {
-                                    console.log(`Converting wet_bulb_temperature_set_1 at index ${index}: ${lastNonNull}°C to ${fahrenheit}°F`);
-                                }
-                                return fahrenheit; // °C to °F
-                            } else if (variable.includes('wind_speed')) {
-                                return (lastNonNull * 2.23694).toFixed(2); // m/s to mph
-                            } else if (variable.includes('altimeter')) {
-                                return (lastNonNull * 0.0002953).toFixed(2); // Pa to inHg
-                            } else if (variable.includes('pressure_set_1d') || variable.includes('sea_level_pressure_set_1d')) {
-                                return (lastNonNull * 0.01).toFixed(2); // Pa to mbar
-                            } else if (variable.includes('precip_accum')) {
-                                return (lastNonNull * 0.03937).toFixed(3); // mm to inches
-                            } else if (variable.includes('ceiling')) {
-                                const feet = (lastNonNull * 3.28084).toFixed(0);
-                                console.log(`Converting ceiling_set_1 at index ${index}: ${lastNonNull}m to ${feet} ft`);
-                                return feet; // Meters to feet
-                            } else if (variable.includes('pressure_tendency')) {
-                                const code = Math.floor(lastNonNull / 1000);
-                                const hPaChange = (lastNonNull % 1000) / 10;
-                                const sign = code >= 0 && code <= 3 ? '+' : (code >= 5 && code <= 8 ? '-' : '');
-                                return `${pressureTendencyCodes[code] || 'Unknown'}: ${sign}${hPaChange.toFixed(1)} hPa`;
-                            } else {
-                                return lastNonNull; // Numeric non-converted (e.g., wind_direction)
-                            }
-                        } else if ((variable === 'weather_condition_set_1d' || variable === 'weather_summary_set_1d' || variable === 'wind_cardinal_direction_set_1d') && value) {
-                            lastNonNull = value;
-                            return value; // Preserve string values
-                        } else {
-                            return lastNonNull !== null && !isNaN(lastNonNull) && !excludedVars.includes(variable) ? 
-                                (variable.includes('air_temp') || variable.includes('heat_index') || 
-                                 variable.includes('dew_point_temperature_set_1d') || variable.includes('wet_bulb_temperature_set_1') || 
-                                 variable.includes('wet_bulb_temp_set_1') ? 
-                                 (lastNonNull * 9/5 + 32).toFixed(2) : 
-                                 variable.includes('wind_speed') ? (lastNonNull * 2.23694).toFixed(2) : 
-                                 variable.includes('altimeter') ? (lastNonNull * 0.0002953).toFixed(2) : 
-                                 variable.includes('pressure_set_1d') || variable.includes('sea_level_pressure_set_1d') ? 
-                                 (lastNonNull * 0.01).toFixed(2) : 
-                                 variable.includes('precip_accum') ? (lastNonNull * 0.03937).toFixed(3) : 
-                                 variable.includes('ceiling') ? (lastNonNull * 3.28084).toFixed(0) : 
-                                 variable.includes('pressure_tendency') ? 
-                                 `${pressureTendencyCodes[Math.floor(lastNonNull / 1000)] || 'Unknown'}: ${(lastNonNull % 1000) / 10 * (Math.floor(lastNonNull / 1000) >= 0 && Math.floor(lastNonNull / 1000) <= 3 ? 1 : (Math.floor(lastNonNull / 1000) >= 5 && Math.floor(lastNonNull / 1000) <= 8 ? -1 : 0)).toFixed(1)} hPa` : 
-                                 lastNonNull) : 
-                                (variable === 'weather_condition_set_1d' || variable === 'weather_summary_set_1d' || variable === 'wind_cardinal_direction_set_1d') ? 
-                                (value || 'N/A') : 'N/A';
-                        }
-                    });
-                    lastNonNullValues[variable] = lastNonNull !== null ? 
-                        (variable.includes('air_temp') || variable.includes('heat_index') || 
-                         variable.includes('dew_point_temperature_set_1d') || variable.includes('wet_bulb_temperature_set_1') || 
-                         variable.includes('wet_bulb_temp_set_1') ? 
-                         (lastNonNull * 9/5 + 32).toFixed(2) : 
-                         variable.includes('wind_speed') ? (lastNonNull * 2.23694).toFixed(2) : 
-                         variable.includes('altimeter') ? (lastNonNull * 0.0002953).toFixed(2) : 
-                         variable.includes('pressure_set_1d') || variable.includes('sea_level_pressure_set_1d') ? 
-                         (lastNonNull * 0.01).toFixed(2) : 
-                         variable.includes('precip_accum') ? (lastNonNull * 0.03937).toFixed(3) : 
-                         variable.includes('ceiling') ? (lastNonNull * 3.28084).toFixed(0) : 
-                         variable.includes('pressure_tendency') ? 
-                         `${pressureTendencyCodes[Math.floor(lastNonNull / 1000)] || 'Unknown'}: ${(lastNonNull % 1000) / 10 * (Math.floor(lastNonNull / 1000) >= 0 && Math.floor(lastNonNull / 1000) <= 3 ? 1 : (Math.floor(lastNonNull / 1000) >= 5 && Math.floor(lastNonNull / 1000) <= 8 ? -1 : 0)).toFixed(1)} hPa` : 
-                         (variable === 'weather_condition_set_1d' || variable === 'weather_summary_set_1d' || variable === 'wind_cardinal_direction_set_1d') ? 
-                         lastNonNull : lastNonNull) : 
-                        (variable === 'weather_condition_set_1d' || variable === 'weather_summary_set_1d' || variable === 'wind_cardinal_direction_set_1d') && 
-                        observations[variable][observations[variable].length - 1] ? 
-                        observations[variable][observations[variable].length - 1] : 'N/A';
-                    console.log(`Converted ${variable} with last non-null value: ${lastNonNullValues[variable]}, sample (last 5):`, 
-                        converted[variable].slice(-5).map(v => v === null ? 'null' : v));
-                });
-            } catch (e) {
-                console.error('Error in convertToAmericanUnits:', e);
-                updateDebug(`Error: Failed to convert units\nDetails: ${e.message}`);
-            }
-            console.groupEnd();
-            return { converted, lastNonNullValues };
-        }
-
-        // Update fixed measurements row based on scroll position
-        function updateFixedMeasurementsRow(convertedObservations, sortedVariables, scrollTop) {
-            try {
-                const tableContainer = $('#data-table-container');
-                const rows = $('#data-table tbody tr');
-                if (!rows.length) {
-                    console.warn('No table rows found for updating fixed measurements');
+            const converted = {}, lastNonNullValues = {}, excludedVars = ['air_temp_high_6_hour_set_1','air_temp_low_6_hour_set_1','air_temp_high_24_hour_set_1','air_temp_low_24_hour_set_1','precip_accum_one_hour_set_1','precip_accum_three_hour_set_1','precip_accum_six_hour_set_1','precip_accum_24_hour_set_1'];
+            variables.forEach(v => {
+                if (!observations[v] || !Array.isArray(observations[v]) || observations[v].length !== allTimestamps.length) {
+                    if (!excludedVars.includes(v)) { converted[v] = Array(allTimestamps.length).fill(null); lastNonNullValues[v] = 'N/A'; }
                     return;
                 }
-                const rowHeight = $(rows[0]).outerHeight() || 40; // Fallback to 40px
-                const firstVisibleRowIndex = Math.max(0, Math.floor(scrollTop / rowHeight));
-                
-                const latestValues = {};
-                sortedVariables.forEach(v => {
-                    latestValues[v] = 'N/A';
-                    for (let i = 0; i <= firstVisibleRowIndex && i < convertedObservations[v].length; i++) {
-                        if (convertedObservations[v] && convertedObservations[v][i] !== 'N/A' && convertedObservations[v][i] !== null) {
-                            latestValues[v] = convertedObservations[v][i];
+                let lastNonNull = null;
+                converted[v] = observations[v].map((value, i) => {
+                    if (value !== null && value !== '' && !isNaN(parseFloat(value))) {
+                        lastNonNull = parseFloat(value);
+                        if (v.includes('air_temp') || v.includes('heat_index') || v.includes('dew_point_temperature_set_1d') || v.includes('wet_bulb_temperature_set_1') || v.includes('wet_bulb_temp_set_1')) {
+                            return (lastNonNull * 9/5 + 32).toFixed(2);
+                        } else if (v.includes('wind_speed')) {
+                            return (lastNonNull * 2.23694).toFixed(2);
+                        } else if (v.includes('altimeter')) {
+                            return (lastNonNull * 0.0002953).toFixed(2);
+                        } else if (v.includes('pressure_set_1d') || v.includes('sea_level_pressure_set_1d')) {
+                            return (lastNonNull * 0.01).toFixed(2);
+                        } else if (v.includes('precip_accum')) {
+                            return (lastNonNull * 0.03937).toFixed(3);
+                        } else if (v.includes('ceiling')) {
+                            return (lastNonNull * 3.28084).toFixed(0);
+                        } else if (v.includes('pressure_tendency')) {
+                            const code = Math.floor(lastNonNull / 1000), hPaChange = (lastNonNull % 1000) / 10;
+                            const sign = code >= 0 && code <= 3 ? '+' : (code >= 5 && code <= 8 ? '-' : '');
+                            return `${pressureTendencyCodes[code] || 'Unknown'}: ${sign}${hPaChange.toFixed(1)} hPa`;
+                        }
+                        return lastNonNull;
+                    } else if ((v === 'weather_condition_set_1d' || v === 'weather_summary_set_1d' || v === 'wind_cardinal_direction_set_1d') && value) {
+                        lastNonNull = value;
+                        return value;
+                    }
+                    return lastNonNull !== null && !isNaN(lastNonNull) && !excludedVars.includes(v) ? 
+                        (v.includes('air_temp') || v.includes('heat_index') || v.includes('dew_point_temperature_set_1d') || v.includes('wet_bulb_temperature_set_1') || v.includes('wet_bulb_temp_set_1') ? 
+                        (lastNonNull * 9/5 + 32).toFixed(2) : v.includes('wind_speed') ? (lastNonNull * 2.23694).toFixed(2) : 
+                        v.includes('altimeter') ? (lastNonNull * 0.0002953).toFixed(2) : v.includes('pressure_set_1d') || v.includes('sea_level_pressure_set_1d') ? 
+                        (lastNonNull * 0.01).toFixed(2) : v.includes('precip_accum') ? (lastNonNull * 0.03937).toFixed(3) : 
+                        v.includes('ceiling') ? (lastNonNull * 3.28084).toFixed(0) : v.includes('pressure_tendency') ? 
+                        `${pressureTendencyCodes[Math.floor(lastNonNull / 1000)] || 'Unknown'}: ${(lastNonNull % 1000) / 10 * (Math.floor(lastNonNull / 1000) >= 0 && Math.floor(lastNonNull / 1000) <= 3 ? 1 : (Math.floor(lastNonNull / 1000) >= 5 && Math.floor(lastNonNull / 1000) <= 8 ? -1 : 0)).toFixed(1)} hPa` : 
+                        lastNonNull) : (v === 'weather_condition_set_1d' || v === 'weather_summary_set_1d' || v === 'wind_cardinal_direction_set_1d') ? (value || 'N/A') : 'N/A';
+                });
+                lastNonNullValues[v] = lastNonNull !== null ? 
+                    (v.includes('air_temp') || v.includes('heat_index') || v.includes('dew_point_temperature_set_1d') || v.includes('wet_bulb_temperature_set_1') || v.includes('wet_bulb_temp_set_1') ? 
+                    (lastNonNull * 9/5 + 32).toFixed(2) : v.includes('wind_speed') ? (lastNonNull * 2.23694).toFixed(2) : 
+                    v.includes('altimeter') ? (lastNonNull * 0.0002953).toFixed(2) : v.includes('pressure_set_1d') || v.includes('sea_level_pressure_set_1d') ? 
+                    (lastNonNull * 0.01).toFixed(2) : v.includes('precip_accum') ? (lastNonNull * 0.03937).toFixed(3) : 
+                    v.includes('ceiling') ? (lastNonNull * 3.28084).toFixed(0) : v.includes('pressure_tendency') ? 
+                    `${pressureTendencyCodes[Math.floor(lastNonNull / 1000)] || 'Unknown'}: ${(lastNonNull % 1000) / 10 * (Math.floor(lastNonNull / 1000) >= 0 && Math.floor(lastNonNull / 1000) <= 3 ? 1 : (Math.floor(lastNonNull / 1000) >= 5 && Math.floor(lastNonNull / 1000) <= 8 ? -1 : 0)).toFixed(1)} hPa` : 
+                    (v === 'weather_condition_set_1d' || v === 'weather_summary_set_1d' || v === 'wind_cardinal_direction_set_1d') ? lastNonNull : lastNonNull) : 
+                    (v === 'weather_condition_set_1d' || v === 'weather_summary_set_1d' || v === 'wind_cardinal_direction_set_1d') && observations[v][observations[v].length - 1] ? 
+                    observations[v][observations[v].length - 1] : 'N/A';
+            });
+            return { converted, lastNonNullValues };
+        }
+        function updateFixedMeasurementsRow(convertedObservations, sortedVariables, scrollTop) {
+            const tableContainer = $('#data-table-container'), rows = $('#data-table tbody tr');
+            if (!rows.length) return;
+            const rowHeight = $(rows[0]).outerHeight() || 40;
+            const firstVisibleRowIndex = Math.max(0, Math.floor(scrollTop / rowHeight));
+            const latestValues = {};
+            sortedVariables.forEach(v => {
+                latestValues[v] = 'N/A';
+                for (let i = 0; i <= firstVisibleRowIndex && i < convertedObservations[v].length; i++) {
+                    if (convertedObservations[v][i] !== 'N/A' && convertedObservations[v][i] !== null) {
+                        latestValues[v] = convertedObservations[v][i];
+                        break;
+                    }
+                }
+            });
+            $('#fixed-measurements-content').html(`<td>Latest Measurements</td>${sortedVariables.map(v => `<td>${latestValues[v]}</td>`).join('')}`);
+            $('#fixed-measurements-row').scrollLeft(tableContainer.scrollLeft());
+        }
+        function updateSummaryTable(observations) {
+            const excludedVars = ['air_temp_high_6_hour_set_1','air_temp_low_6_hour_set_1','air_temp_high_24_hour_set_1','air_temp_low_24_hour_set_1','precip_accum_one_hour_set_1','precip_accum_three_hour_set_1','precip_accum_six_hour_set_1','precip_accum_24_hour_set_1'];
+            const lastValues = {};
+            excludedVars.forEach(v => {
+                lastValues[v] = 'N/A';
+                if (observations[v] && Array.isArray(observations[v])) {
+                    for (let i = observations[v].length - 1; i >= 0; i--) {
+                        const value = observations[v][i];
+                        if (value !== null && value !== '' && !isNaN(parseFloat(value))) {
+                            const parsedValue = parseFloat(value);
+                            lastValues[v] = v.includes('air_temp') ? (parsedValue * 9/5 + 32).toFixed(2) : 
+                                            v.includes('precip_accum') ? (parsedValue * 0.03937).toFixed(3) : parsedValue.toFixed(4);
                             break;
                         }
                     }
-                });
-
-                const cells = sortedVariables.map(v => `<td>${latestValues[v]}</td>`);
-                $('#fixed-measurements-content').html(`<td>Latest Measurements</td>${cells.join('')}`);
-                $('#fixed-measurements-row').scrollLeft(tableContainer.scrollLeft());
-                console.log('Updated fixed measurements row at index:', firstVisibleRowIndex, 'values:', latestValues);
-            } catch (e) {
-                console.error('Error in updateFixedMeasurementsRow:', e);
-                updateDebug(`Error: Failed to update fixed measurements row\nDetails: ${e.message}`);
-            }
+                }
+            });
+            $('#summary-table-body').html(excludedVars.map(v => {
+                const label = v.replace('_set_1', '').replace(/_/g, ' ') + (v.includes('air_temp') ? ' (°F)' : v.includes('precip_accum') ? ' (in)' : '');
+                const cellClass = v.includes('air_temp') ? 'high-low' : '';
+                return `<tr><td>${label}</td><td class="${cellClass}">${lastValues[v]}</td></tr>`;
+            }).join(''));
         }
-
-        // Update summary table with last non-null values for excluded variables
-        function updateSummaryTable(observations) {
-            try {
-                const excludedVars = [
-                    'air_temp_high_6_hour_set_1', 'air_temp_low_6_hour_set_1', 'air_temp_high_24_hour_set_1', 'air_temp_low_24_hour_set_1',
-                    'precip_accum_one_hour_set_1', 'precip_accum_three_hour_set_1', 'precip_accum_six_hour_set_1', 'precip_accum_24_hour_set_1'
-                ];
-                const lastValues = {};
-                excludedVars.forEach(v => {
-                    lastValues[v] = 'N/A';
-                    if (observations[v] && Array.isArray(observations[v])) {
-                        console.log(`Processing excluded variable ${v}, length: ${observations[v].length}, expected: ${allTimestamps.length}, sample: ${JSON.stringify(observations[v].slice(-5))}`);
-                        if (observations[v].length !== allTimestamps.length) {
-                            console.warn(`Length mismatch for ${v}: ${observations[v].length} vs ${allTimestamps.length}`);
-                        }
-                        for (let i = observations[v].length - 1; i >= 0; i--) {
-                            const value = observations[v][i];
-                            if (value !== null && value !== '' && !isNaN(parseFloat(value))) {
-                                const parsedValue = parseFloat(value);
-                                if (v.includes('air_temp')) {
-                                    lastValues[v] = (parsedValue * 9/5 + 32).toFixed(2); // °C to °F
-                                } else if (v.includes('precip_accum')) {
-                                    lastValues[v] = (parsedValue * 0.03937).toFixed(3); // mm to inches
-                                } else {
-                                    lastValues[v] = parsedValue.toFixed(4); // Fallback
-                                }
-                                console.log(`Found non-null value for ${v} at index ${i}: ${lastValues[v]}`);
-                                break;
-                            }
-                        }
-                    } else {
-                        console.warn(`Variable ${v} missing or not an array in observations`);
-                    }
-                });
-
-                const rows = excludedVars.map(v => {
-                    const label = v.replace('_set_1', '').replace(/_/g, ' ') + 
-                        (v.includes('air_temp') ? ' (°F)' : v.includes('precip_accum') ? ' (in)' : '');
-                    const cellClass = v.includes('air_temp') ? 'high-low' : '';
-                    return `<tr><td>${label}</td><td class="${cellClass}">${lastValues[v]}</td></tr>`;
-                });
-                $('#summary-table-body').html(rows.join(''));
-                console.log('Updated summary table with converted values:', lastValues);
-            } catch (e) {
-                console.error('Error in updateSummaryTable:', e);
-                updateDebug(`Error: Failed to update summary table\nDetails: ${e.message}`);
-                $('#summary-table-body').html('');
-            }
-        }
-
-        // Display data in HTML table
         function displayStationData(station) {
-            console.group('Displaying Station Data');
-            const startTime = performance.now();
-            console.log('Processing data for station:', station?.STID || 'unknown');
-
-            try {
-                if (!station || !station.OBSERVATIONS) {
-                    throw new Error(`No OBSERVATIONS in station data: ${JSON.stringify(station)}`);
-                }
-
-                allObservations = station.OBSERVATIONS;
-                allTimestamps = (allObservations.date_time || []).slice().reverse(); // Reverse timestamps
-                if (!allTimestamps.length) {
-                    throw new Error(`No date_time in OBSERVATIONS: ${JSON.stringify(allObservations)}`);
-                }
-
-                const allVariables = Object.keys(allObservations).filter(key => key !== 'date_time');
-                const excludePatterns = /cloud_layer|metar|pressure_change_code|dew_point_temperature_set_1(?!d)|air_temp_high_6_hour_set_1|air_temp_low_6_hour_set_1|air_temp_high_24_hour_set_1|air_temp_low_24_hour_set_1|precip_accum_one_hour_set_1|precip_accum_three_hour_set_1|precip_accum_six_hour_set_1|precip_accum_24_hour_set_1|sea_level_pressure_set_1$|sea_level_pressure_tendency$|weather_cond_code_set_1/;
-                const variables = allVariables.filter(v => !excludePatterns.test(v));
-
-                // Sort variables by groups
-                const tempVars = variables.filter(v => 
-                    /air_temp_set_1$|dew_point_temperature_set_1d|wet_bulb_temp_set_1d|heat_index_set_1d|relative_humidity_set_1/.test(v)
-                );
-                const windVars = variables.filter(v => 
-                    /wind_speed_set_1|wind_direction_set_1|wind_gust_set_1|wind_cardinal_direction_set_1d/.test(v)
-                );
-                const pressureVars = variables.filter(v => 
-                    /pressure_set_1d|altimeter_set_1|sea_level_pressure_set_1d|pressure_tendency_set_1/.test(v)
-                );
-                const otherVars = variables.filter(v => 
-                    !/air_temp_set_1$|dew_point_temperature_set_1d|wet_bulb_temp_set_1d|heat_index_set_1d|relative_humidity_set_1|wind_speed_set_1|wind_direction_set_1|wind_gust_set_1|wind_cardinal_direction_set_1d|pressure_set_1d|altimeter_set_1|sea_level_pressure_set_1d|pressure_tendency_set_1/.test(v)
-                );
-
-                let sortedVariables = [...tempVars, ...windVars, ...pressureVars, ...otherVars];
-
-                const preferredOrder = [
-                    "air_temp_set_1",                   // Air Temperature: °F
-                    "relative_humidity_set_1",         // Relative Humidity: %
-                    "wind_speed_set_1",                // Wind Speed: mph
-                    "heat_index_set_1d",               // Heat Index: °F
-                    "weather_summary_set_1d",          // Weather Summary
-                    "wind_cardinal_direction_set_1d",  // Wind Cardinal Direction
-                    "wind_gust_set_1",                 // Wind Gust: mph
-                    "visibility_set_1",                // Visibility: miles
-                    "weather_condition_set_1d",        // Weather Condition
-                    "dew_point_temperature_set_1d",    // Dew Point Temperature: °F
-                    "ceiling_set_1",                   // Ceiling Height: ft
-                    "pressure_set_1d",                 // Station Pressure: mbar
-                    "sea_level_pressure_set_1d",       // Sea Level Pressure: mbar
-                    "altimeter_set_1",                 // Altimeter Setting: inHg
-                    "pressure_tendency_set_1",         // Pressure Tendency
-                    "wet_bulb_temp_set_1d",            // Wet Bulb Temperature: °F
-                    "wind_direction_set_1",            // Wind Direction: °
-                    "peak_wind_speed_set_1",           // Peak Wind Speed (optional)
-                    "peak_wind_direction_set_1"        // Peak Wind Direction (optional)
-                ];
-
-                // Reorder sortedVariables by preferredOrder, keeping any extras at the end
-                const preferredSet = new Set(preferredOrder);
-                sortedVariables = [
-                    ...preferredOrder.filter(v => sortedVariables.includes(v)),
-                    ...sortedVariables.filter(v => !preferredSet.has(v))
-                ];
-
-                console.log('All variables:', allVariables);
-                console.log('Filtered variables:', variables);
-                console.log('Sorted variables:', sortedVariables);
-                console.log('Total timestamps:', allTimestamps.length);
-                console.log('Variable array lengths:', allVariables.map(v => ({
-                    variable: v,
-                    length: allObservations[v]?.length || 0,
-                    sample: allObservations[v]?.slice(-5) || []
-                })));
-
-                // Prepare data, reversing observation arrays
-                const filteredObservations = {};
-                sortedVariables.forEach(v => {
-                    filteredObservations[v] = allObservations[v] && Array.isArray(allObservations[v]) && allObservations[v].length === allTimestamps.length
-                        ? allObservations[v].slice().reverse() // Reverse observations
-                        : Array(allTimestamps.length).fill(null);
-                    if (!allObservations[v]) {
-                        console.log(`Variable ${v} missing in observations, filled with nulls`);
-                    } else if (allObservations[v].length !== allTimestamps.length) {
-                        console.log(`Variable ${v} length mismatch: ${allObservations[v].length} vs ${allTimestamps.length}, filled with nulls`);
-                    }
-                });
-                const { converted: convertedObservations, lastNonNullValues } = convertToAmericanUnits(filteredObservations, sortedVariables);
-
-                // Update view title
-                const now = luxon.DateTime.now().setZone('America/Chicago');
-                lastUpdateTime = now.isValid ? now.toFormat('MM/dd/yyyy HH:mm:ss') : 'N/A';
-                $('#data-view-title').text(`Station: ${station.STID} | Last Updated: ${lastUpdateTime}`);
-
-                // Mapping for official labels with units
-                const officialLabels = {
-                    "air_temp_set_1": "Air Temperature: °F",
-                    "relative_humidity_set_1": "Relative Humidity: %",
-                    "wind_speed_set_1": "Wind Speed: mph",
-                    "heat_index_set_1d": "Heat Index: °F",
-                    "weather_summary_set_1d": "Weather Summary",
-                    "wind_cardinal_direction_set_1d": "Wind Cardinal Direction",
-                    "wind_gust_set_1": "Wind Gust: mph",
-                    "weather_condition_set_1d": "Weather Condition",
-                    "dew_point_temperature_set_1d": "Dew Point Temperature: °F",
-                    "visibility_set_1": "Visibility: miles",
-                    "ceiling_set_1": "Ceiling Height: ft",
-                    "pressure_set_1d": "Station Pressure: mbar",
-                    "sea_level_pressure_set_1d": "Sea Level Pressure: mbar",
-                    "altimeter_set_1": "Altimeter Setting: inHg",
-                    "pressure_tendency_set_1": "Pressure Tendency",
-                    "wet_bulb_temp_set_1d": "Wet Bulb Temperature: °F",
-                    "wind_direction_set_1": "Wind Direction: °",
-                    "peak_wind_speed_set_1": "Peak Wind Speed: mph",
-                    "peak_wind_direction_set_1": "Peak Wind Direction: °"
-                };
-
-                // Update table headers
-                const headers = ['Timestamp', ...sortedVariables.map(v => officialLabels[v] || v)];
-                $('#data-table thead tr').html(headers.map(h => `<th>${h}</th>`).join(''));
-
-                // Initialize fixed measurements row
-                const fixedCells = sortedVariables.map(v => `<td>${lastNonNullValues[v]}</td>`);
-                $('#fixed-measurements-content').html(`<td>Latest Measurements</td>${fixedCells.join('')}`);
-
-                // Prepare table rows
-                const rows = allTimestamps.map((time, index) => {
-                    let parsedTime;
-                    try {
-                        parsedTime = luxon.DateTime.fromISO(time, { zone: 'America/Chicago' });
-                        if (!parsedTime.isValid) {
-                            console.warn(`Invalid timestamp at index ${index}: ${time}`);
-                            parsedTime = '(invalid date)';
-                        } else {
-                            parsedTime = parsedTime.toFormat('MM/dd/yyyy HH:mm:ss');
-                        }
-                    } catch (e) {
-                        console.warn(`Error parsing timestamp at index ${index}: ${time}`, e);
-                        parsedTime = '(invalid date)';
-                    }
-                    const cells = [
-                        `<td>${parsedTime}</td>`,
-                        ...sortedVariables.map(v => {
-                            if (!convertedObservations[v]) {
-                                console.log(`Variable ${v} missing in convertedObservations at index ${index}`);
-                                return `<td>N/A</td>`;
-                            }
-                            const value = convertedObservations[v][index] !== null && convertedObservations[v][index] !== 'N/A' ? 
-                                convertedObservations[v][index] : 'N/A';
-                            return `<td>${value}</td>`;
-                        })
-                    ];
-                    return `<tr>${cells.join('')}</tr>`;
-                });
-
-                $('#data-table tbody').html(rows.join(''));
-                $('#data-table-container').off('scroll').on('scroll', function() {
-                    updateFixedMeasurementsRow(convertedObservations, sortedVariables, $(this).scrollTop());
-                    $('#fixed-measurements-row').scrollLeft($(this).scrollLeft());
-                });
-                updateSummaryTable(allObservations);
-                console.log('Table data sample (first 2 rows, latest):', rows.slice(0, 2));
-                console.log('Total rows:', rows.length);
-                const duration = performance.now() - startTime;
-                console.log('Table rendering completed in', duration.toFixed(2), 'ms');
-                toggleViews();
-            } catch (e) {
-                console.error('Error in displayStationData:', e);
-                updateDebug(`Error: Failed to display station data\nDetails: ${e.message}`);
+            if (!station || !station.OBSERVATIONS) {
+                updateDebug('Error: No observation data');
                 $('#data-table tbody').html('');
                 $('#fixed-measurements-content').html('<td>Latest Measurements</td>');
                 $('#summary-table-body').html('');
                 $('#data-view-title').text(`Station: ${currentStationId} | Last Updated: N/A`);
                 toggleViews();
-            }
-            console.groupEnd();
-        }
-
-        // Fetch time series data for 3 days
-        function fetchStationData(stationId, startDate, endDate) {
-            console.group('Fetching Station Data');
-            const startTime = performance.now();
-            console.log('Request started at', new Date().toISOString());
-
-            const formatDate = (date) => {
-                try {
-                    const year = date.getUTCFullYear();
-                    const month = String(date.getUTCMonth() + 1).padStart(2, '0');
-                    const day = String(date.getUTCDate()).padStart(2, '0');
-                    const hours = String(date.getUTCHours()).padStart(2, '0');
-                    const minutes = String(date.getUTCMinutes()).padStart(2, '0');
-                    return `${year}${month}${day}${hours}${minutes}`;
-                } catch (e) {
-                    console.error('Error in formatDate:', e);
-                    return '';
-                }
-            };
-
-            const startFormatted = formatDate(startDate);
-            const endFormatted = formatDate(endDate);
-            if (!startFormatted || !endFormatted) {
-                console.error('Invalid date formatting:', { startDate, endDate });
-                updateDebug('Error: Invalid date formatting for API request');
                 return;
             }
-
+            allObservations = station.OBSERVATIONS;
+            allTimestamps = (allObservations.date_time || []).slice().reverse();
+            if (!allTimestamps.length) {
+                updateDebug('Error: No timestamps in observations');
+                $('#data-table tbody').html('');
+                $('#fixed-measurements-content').html('<td>Latest Measurements</td>');
+                $('#summary-table-body').html('');
+                $('#data-view-title').text(`Station: ${currentStationId} | Last Updated: N/A`);
+                toggleViews();
+                return;
+            }
+            const allVariables = Object.keys(allObservations).filter(key => key !== 'date_time');
+            const excludePatterns = /cloud_layer|metar|pressure_change_code|dew_point_temperature_set_1(?!d)|air_temp_high_6_hour_set_1|air_temp_low_6_hour_set_1|air_temp_high_24_hour_set_1|air_temp_low_24_hour_set_1|precip_accum_one_hour_set_1|precip_accum_three_hour_set_1|precip_accum_six_hour_set_1|precip_accum_24_hour_set_1|sea_level_pressure_set_1$|sea_level_pressure_tendency$|weather_cond_code_set_1/;
+            const variables = allVariables.filter(v => !excludePatterns.test(v));
+            const sortedVariables = [
+                ...['air_temp_set_1','relative_humidity_set_1','wind_speed_set_1','heat_index_set_1d','weather_summary_set_1d','wind_cardinal_direction_set_1d','wind_gust_set_1','visibility_set_1','weather_condition_set_1d','dew_point_temperature_set_1d','ceiling_set_1','pressure_set_1d','sea_level_pressure_set_1d','altimeter_set_1','pressure_tendency_set_1','wet_bulb_temp_set_1d','wind_direction_set_1','peak_wind_speed_set_1','peak_wind_direction_set_1'].filter(v => variables.includes(v)),
+                ...variables.filter(v => !['air_temp_set_1','relative_humidity_set_1','wind_speed_set_1','heat_index_set_1d','weather_summary_set_1d','wind_cardinal_direction_set_1d','wind_gust_set_1','visibility_set_1','weather_condition_set_1d','dew_point_temperature_set_1d','ceiling_set_1','pressure_set_1d','sea_level_pressure_set_1d','altimeter_set_1','pressure_tendency_set_1','wet_bulb_temp_set_1d','wind_direction_set_1','peak_wind_speed_set_1','peak_wind_direction_set_1'].includes(v))
+            ];
+            const filteredObservations = {};
+            sortedVariables.forEach(v => {
+                filteredObservations[v] = allObservations[v] && Array.isArray(allObservations[v]) && allObservations[v].length === allTimestamps.length ? allObservations[v].slice().reverse() : Array(allTimestamps.length).fill(null);
+            });
+            const { converted: convertedObservations, lastNonNullValues } = convertToAmericanUnits(filteredObservations, sortedVariables);
+            $('#data-view-title').text(`Station: ${station.STID} | Last Updated: ${luxon.DateTime.now().setZone('America/Chicago').toFormat('MM/dd/yyyy HH:mm:ss')}`);
+            const officialLabels = {
+                "air_temp_set_1": "Air Temperature: °F", "relative_humidity_set_1": "Relative Humidity: %", "wind_speed_set_1": "Wind Speed: mph",
+                "heat_index_set_1d": "Heat Index: °F", "weather_summary_set_1d": "Weather Summary", "wind_cardinal_direction_set_1d": "Wind Cardinal Direction",
+                "wind_gust_set_1": "Wind Gust: mph", "weather_condition_set_1d": "Weather Condition", "dew_point_temperature_set_1d": "Dew Point Temperature: °F",
+                "visibility_set_1": "Visibility: miles", "ceiling_set_1": "Ceiling Height: ft", "pressure_set_1d": "Station Pressure: mbar",
+                "sea_level_pressure_set_1d": "Sea Level Pressure: mbar", "altimeter_set_1": "Altimeter Setting: inHg", "pressure_tendency_set_1": "Pressure Tendency",
+                "wet_bulb_temp_set_1d": "Wet Bulb Temperature: °F", "wind_direction_set_1": "Wind Direction: °", "peak_wind_speed_set_1": "Peak Wind Speed: mph",
+                "peak_wind_direction_set_1": "Peak Wind Direction: °"
+            };
+            $('#data-table thead tr').html(['Timestamp', ...sortedVariables.map(v => officialLabels[v] || v)].map(h => `<th>${h}</th>`).join(''));
+            $('#fixed-measurements-content').html(`<td>Latest Measurements</td>${sortedVariables.map(v => `<td>${lastNonNullValues[v]}</td>`).join('')}`);
+            $('#data-table tbody').html(allTimestamps.map((time, index) => {
+                const parsedTime = luxon.DateTime.fromISO(time, { zone: 'America/Chicago' }).isValid ? 
+                    luxon.DateTime.fromISO(time, { zone: 'America/Chicago' }).toFormat('MM/dd/yyyy HH:mm:ss') : '(invalid date)';
+                return `<tr><td>${parsedTime}</td>${sortedVariables.map(v => `<td>${convertedObservations[v][index] !== null && convertedObservations[v][index] !== 'N/A' ? convertedObservations[v][index] : 'N/A'}</td>`).join('')}</tr>`;
+            }).join(''));
+            $('#data-table-container').off('scroll').on('scroll', function() {
+                updateFixedMeasurementsRow(convertedObservations, sortedVariables, $(this).scrollTop());
+                $('#fixed-measurements-row').scrollLeft($(this).scrollLeft());
+            });
+            updateSummaryTable(allObservations);
+            toggleViews();
+        }
+        function fetchStationData(stationId, startDate, endDate) {
+            const formatDate = date => `${date.getUTCFullYear()}${String(date.getUTCMonth() + 1).padStart(2, '0')}${String(date.getUTCDate()).padStart(2, '0')}${String(date.getUTCHours()).padStart(2, '0')}${String(date.getUTCMinutes()).padStart(2, '0')}`;
+            const startFormatted = formatDate(startDate), endFormatted = formatDate(endDate);
+            if (!startFormatted || !endFormatted) {
+                updateDebug('Error: Invalid date formatting');
+                return;
+            }
             const url = `${API_BASE_URL}stations/timeseries?stid=${stationId}&start=${startFormatted}&end=${endFormatted}&token=${API_TOKEN}&obtimezone=local`;
-
-            console.log('API URL:', url);
             updateDebug(`API URL: ${url}\nStatus: Fetching...`);
-
             $.ajax({
                 url: url,
                 method: 'GET',
-                beforeSend: function() {
-                    console.log('Sending API request...');
-                },
-                success: function (data, status, xhr) {
-                    const duration = performance.now() - startTime;
-                    console.log('Request completed in', duration.toFixed(2), 'ms');
-                    console.log('HTTP Status:', xhr.status);
-                    console.log('Response Size:', JSON.stringify(data).length, 'bytes');
-                    console.log('Raw Response (summary):', {
-                        stationCount: data.STATION?.length,
-                        observations: data.STATION?.[0]?.OBSERVATIONS ? Object.keys(data.STATION[0].OBSERVATIONS) : null,
-                        responseCode: data.SUMMARY?.RESPONSE_CODE,
-                        responseMessage: data.SUMMARY?.RESPONSE_MESSAGE
-                    });
-
+                success: function(data, status, xhr) {
                     updateDebug(`API URL: ${url}\nStatus: Success\nHTTP Status: ${xhr.status}\nResponse Size: ${JSON.stringify(data).length} bytes`);
-
-                    try {
-                        if (data.STATION && data.STATION[0] && data.STATION[0].OBSERVATIONS && data.SUMMARY.RESPONSE_CODE === 1) {
-                            console.log('Valid data received for station:', data.STATION[0].STID);
-                            console.log('Observations:', Object.keys(data.STATION[0].OBSERVATIONS));
-                            currentStationId = data.STATION[0].STID;
-                            displayStationData(data.STATION[0]);
-                        } else {
-                            throw new Error(`Invalid station or no observation data: ${data.SUMMARY?.RESPONSE_MESSAGE || 'Unknown error'}`);
-                        }
-                    } catch (e) {
-                        console.error('Error processing API response:', e);
-                        updateDebug(`API URL: ${url}\nStatus: Failed\nError: Station name invalid\nResponse: ${e.message}`);
+                    if (data.STATION && data.STATION[0] && data.STATION[0].OBSERVATIONS && data.SUMMARY.RESPONSE_CODE === 1) {
+                        currentStationId = data.STATION[0].STID;
+                        displayStationData(data.STATION[0]);
+                    } else {
+                        updateDebug(`API URL: ${url}\nStatus: Failed\nError: Station name invalid\nResponse: ${data.SUMMARY?.RESPONSE_MESSAGE || 'Unknown error'}`);
                         alert('Station name invalid. Check debug info.');
                         $('#data-table tbody').html('');
                         $('#fixed-measurements-content').html('<td>Latest Measurements</td>');
@@ -807,14 +435,8 @@
                         $('#data-view-title').text(`Station: ${stationId} | Last Updated: N/A`);
                         toggleViews();
                     }
-                    console.groupEnd();
                 },
-                error: function (xhr, status, error) {
-                    const duration = performance.now() - startTime;
-                    console.error('Request failed after', duration.toFixed(2), 'ms');
-                    console.error('Status:', status);
-                    console.error('Error:', error);
-                    console.error('Response Text:', xhr.responseText);
+                error: function(xhr) {
                     updateDebug(`API URL: ${url}\nStatus: Failed\nError: Station name invalid\nResponse: ${xhr.responseText || 'N/A'}`);
                     alert('Station name invalid. Check debug info.');
                     $('#data-table tbody').html('');
@@ -822,51 +444,27 @@
                     $('#summary-table-body').html('');
                     $('#data-view-title').text(`Station: ${stationId} | Last Updated: N/A`);
                     toggleViews();
-                    console.groupEnd();
                 }
             });
         }
-
-        // Initialize and set up event listeners
-        $(document).ready(function () {
-            console.group('Application Initialization');
-            console.log('Document ready at', new Date().toISOString());
-
-            // Initial 3-day period
-            let currentEndDate = new Date();
-            let currentStartDate = new Date(currentEndDate.getTime() - 3 * 24 * 60 * 60 * 1000);
-
-            // Update time display every second
+        $(document).ready(function() {
+            let currentEndDate = new Date(), currentStartDate = new Date(currentEndDate.getTime() - 3 * 24 * 60 * 60 * 1000);
             updateTimeDisplay();
             setInterval(updateTimeDisplay, 1000);
-
             $('#search-button').on('click', function() {
-                try {
-                    const stationId = $('#station-input').val().trim().toUpperCase();
-                    console.log('Search button clicked at', new Date().toISOString(), 'for station:', stationId);
-                    if (stationId) {
-                        // Reset to current 3-day period
-                        currentEndDate = new Date();
-                        currentStartDate = new Date(currentEndDate.getTime() - 3 * 24 * 60 * 60 * 1000);
-                        fetchStationData(stationId, currentStartDate, currentEndDate);
-                    } else {
-                        updateDebug('Status: Failed\nError: Station ID cannot be empty');
-                        alert('Please enter a station ID.');
-                    }
-                } catch (e) {
-                    console.error('Error in search button handler:', e);
-                    updateDebug(`Error: Search failed\nDetails: ${e.message}`);
+                const stationId = $('#station-input').val().trim().toUpperCase();
+                if (stationId) {
+                    currentEndDate = new Date();
+                    currentStartDate = new Date(currentEndDate.getTime() - 3 * 24 * 60 * 60 * 1000);
+                    fetchStationData(stationId, currentStartDate, currentEndDate);
+                } else {
+                    updateDebug('Status: Failed\nError: Station ID cannot be empty');
+                    alert('Please enter a station ID.');
                 }
             });
-
             $('#station-input').on('keypress', function(e) {
-                if (e.which === 13) { // Enter key
-                    $('#search-button').click();
-                }
+                if (e.which === 13) $('#search-button').click();
             });
-
-            console.log('Event listeners set up');
-            console.groupEnd();
         });
     </script>
 </body>
